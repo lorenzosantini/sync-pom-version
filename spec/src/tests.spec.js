@@ -20,6 +20,9 @@ describe('sync-pom-version tests', function () {
                 "test": "echo \"Error: no test specified\" && exit 1",
             },
             "author": "xxx",
+            "devDependencies": {
+                "myDevDependency": "$$$$$$"
+            }
         });
     });
 
@@ -35,6 +38,16 @@ describe('sync-pom-version tests', function () {
                 "</project>";
         });
 
+        it('tests that myDevDependency version is updated with the one read from pom', function () {
+            var POM_NEW_VERSION = "1.35";
+            var PACKAGE_JSON_OLD_VERSION = "1.34.0";
+            var PACKAGE_JSON_EXPECTED_NEW_VERSION = "1.35.0";
+
+            var DEV_DEPENDENCY = "myDevDependency";
+            var DEV_DEPENDENCY_UPDATED_VERSION = "@@@@@@";
+
+            testVersionReplacement(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION, PACKAGE_JSON_EXPECTED_NEW_VERSION, DEV_DEPENDENCY, DEV_DEPENDENCY_UPDATED_VERSION);
+        });
 
         it('pom has an updated version on two digits -> package.json should be updated with the same version of pom on three digits', function () {
             var POM_NEW_VERSION = "1.35";
@@ -109,27 +122,32 @@ describe('sync-pom-version tests', function () {
 
 });
 
-    function testVersionReplacement(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION, PACKAGE_JSON_EXPECTED_NEW_VERSION) {
-        pomContent = setVersion(pomContent, POM_NEW_VERSION);
-        packageJsonContent = setVersion(packageJsonContent, PACKAGE_JSON_OLD_VERSION);
-        var packageVersion = "";
+function testVersionReplacement(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION, PACKAGE_JSON_EXPECTED_NEW_VERSION, DEV_DEPENDENCY, DEV_DEPENDENCY_UPDATED_VERSION) {
+    pomContent = setVersion(pomContent, POM_NEW_VERSION);
+    packageJsonContent = setVersion(packageJsonContent, PACKAGE_JSON_OLD_VERSION);
+    var packageVersion = "";
+    var devDependencyVersion = "";
 
-        syncPom.main(pomContent, packageJsonContent, function (content) {
-            packageVersion = JSON.parse(content).version;
-        });
+    syncPom.main(pomContent, packageJsonContent, DEV_DEPENDENCY, DEV_DEPENDENCY_UPDATED_VERSION, function (content) {
+        packageVersion = JSON.parse(content).version;
+        devDependencyVersion = JSON.parse(content).devDependencies.myDevDependency;
+    });
 
-        assert.equal(packageVersion, PACKAGE_JSON_EXPECTED_NEW_VERSION)
+    assert.equal(packageVersion, PACKAGE_JSON_EXPECTED_NEW_VERSION);
+    if (DEV_DEPENDENCY) {
+        assert.equal(devDependencyVersion, DEV_DEPENDENCY_UPDATED_VERSION);
     }
+}
 
-    function testNoReplacementOccurred(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION) {
-        pomContent = setVersion(pomContent, POM_NEW_VERSION);
-        packageJsonContent = setVersion(packageJsonContent, PACKAGE_JSON_OLD_VERSION);
+function testNoReplacementOccurred(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION) {
+    pomContent = setVersion(pomContent, POM_NEW_VERSION);
+    packageJsonContent = setVersion(packageJsonContent, PACKAGE_JSON_OLD_VERSION);
 
-        syncPom.main(pomContent, packageJsonContent, function (content) {
-            assert.fail("Unexpected attempt to write the following updated package.json:\n\n " + content);
-        });
-    }
+    syncPom.main(pomContent, packageJsonContent, function (content) {
+        assert.fail("Unexpected attempt to write the following updated package.json:\n\n " + content);
+    });
+}
 
-    function setVersion(content, version) {
-        return content.replace("######", version);
-    }
+function setVersion(content, version) {
+    return content.replace("######", version);
+}

@@ -13,7 +13,7 @@ function extractPomVersion(pomContent) {
     return pomVersion;
 }
 
-exports.main = function(pomContent, packageContent, writer) {
+exports.main = function (pomContent, packageContent, devDependencyToUpdate, devDependencyNewVersion, writer) {
 
     var pomVersion = extractPomVersion(pomContent);
     console.log('found version ' + pomVersion + ' in pom.xml');
@@ -23,13 +23,18 @@ exports.main = function(pomContent, packageContent, writer) {
     var npmVersion = json.version;
     console.log('found version ' + npmVersion + ' in package.json');
 
+    var devDependencyToUpdateOldVersion = json.devDependencies[devDependencyToUpdate];
+    console.log('found version ' + devDependencyToUpdateOldVersion + ' of devDependency ' + devDependencyToUpdate + ' in package.json');
+
     var newNpmVersion = mvnVersionToNpm(pomVersion);
 
     if (newNpmVersion !== npmVersion) {
         json.version = newNpmVersion;
+        json.devDependencies[devDependencyToUpdate] = devDependencyNewVersion;
         var newPackageContent = JSON.stringify(json);
         writer(newPackageContent);
-        console.log('package.json updated to version ' + pomVersion);
+        console.log('package.json updated to version ' + newNpmVersion);
+        console.log('package.json ' + devDependencyToUpdate + ' updated to version ' + devDependencyNewVersion);
     }
 };
 
@@ -38,6 +43,7 @@ function extractParentNode(node) {
         return item.name === 'parent';
     })[0];
 }
+
 function extractPomVersionNode(parent) {
     return parent.children.filter(function (item) {
         return item.name === 'version';
@@ -55,9 +61,9 @@ function padToNPMVersion(version) {
     return version;
 }
 
-function mvnVersionToNpm (mvnVersion) {
+function mvnVersionToNpm(mvnVersion) {
     var normalizedMvnVersion = mvnVersion.replace(/[\.-](RELEASE|FINAL)$/i, '');
     var tokens = normalizedMvnVersion.split("-");
-    var snapshotSuffix = (tokens.length == 2 ? "-" +  tokens[1] : "");
+    var snapshotSuffix = (tokens.length == 2 ? "-" + tokens[1] : "");
     return padToNPMVersion(tokens[0]) + snapshotSuffix;
 }
