@@ -21,6 +21,7 @@
   "homepage": "https://github.com/darrachequesne/sync-pom-version#readme",
   "files": [
     "index.js",
+    "syncpom.js",
     "bin/"
   ],
   "devDependencies": {
