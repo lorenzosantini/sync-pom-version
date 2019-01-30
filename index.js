@@ -1,6 +1,6 @@
 var fs = require('fs');
 const main = require("./syncpom").main;
-var args = process.argv.splice(2);
+var args = process.argv.splice(4);
 var pomPath = args.length ? args[0] : 'pom.xml';
 var packagePath = args.length >= 2 ? args[1] : 'package.json';
 var devDependencyToUpdate = args.length >= 3 ? args[2] : undefined;
