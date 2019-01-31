@@ -10,6 +10,11 @@ var syncPom = require('../../syncpom.js');
 var pomContent = "";
 var packageJsonContent = "";
 
+var DEPENDENCY_TYPE = {
+    DEV_DEPENDENCY: 1,
+    DEPENDENCY: 2,
+};
+
 describe('sync-pom-version tests', function () {
     beforeEach(function () {
         packageJsonContent = JSON.stringify({
@@ -22,6 +27,9 @@ describe('sync-pom-version tests', function () {
             "author": "xxx",
             "devDependencies": {
                 "myDevDependency": "$$$$$$"
+            },
+            "dependencies": {
+                "myDependency": "//////"
             }
         });
     });
@@ -46,7 +54,18 @@ describe('sync-pom-version tests', function () {
             var DEV_DEPENDENCY = "myDevDependency";
             var DEV_DEPENDENCY_UPDATED_VERSION = "@@@@@@";
 
-            testVersionReplacement(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION, PACKAGE_JSON_EXPECTED_NEW_VERSION, DEV_DEPENDENCY, DEV_DEPENDENCY_UPDATED_VERSION);
+            testDependencyVersionReplacement(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION, PACKAGE_JSON_EXPECTED_NEW_VERSION, DEPENDENCY_TYPE.DEV_DEPENDENCY, DEV_DEPENDENCY, DEV_DEPENDENCY_UPDATED_VERSION);
+        });
+
+        it('tests that myDependency version is updated with the one read from pom', function () {
+            var POM_NEW_VERSION = "1.35";
+            var PACKAGE_JSON_OLD_VERSION = "1.34.0";
+            var PACKAGE_JSON_EXPECTED_NEW_VERSION = "1.35.0";
+
+            var DEPENDENCY = "myDependency";
+            var DEPENDENCY_UPDATED_VERSION = "££££££";
+
+            testDependencyVersionReplacement(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION, PACKAGE_JSON_EXPECTED_NEW_VERSION, DEPENDENCY_TYPE.DEPENDENCY, DEPENDENCY, DEPENDENCY_UPDATED_VERSION);
         });
 
         it('pom has an updated version on two digits -> package.json should be updated with the same version of pom on three digits', function () {
@@ -122,21 +141,36 @@ describe('sync-pom-version tests', function () {
 
 });
 
-function testVersionReplacement(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION, PACKAGE_JSON_EXPECTED_NEW_VERSION, DEV_DEPENDENCY, DEV_DEPENDENCY_UPDATED_VERSION) {
+function testVersionReplacement(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION, PACKAGE_JSON_EXPECTED_NEW_VERSION) {
     pomContent = setVersion(pomContent, POM_NEW_VERSION);
     packageJsonContent = setVersion(packageJsonContent, PACKAGE_JSON_OLD_VERSION);
     var packageVersion = "";
-    var devDependencyVersion = "";
 
-    syncPom.main(pomContent, packageJsonContent, DEV_DEPENDENCY, DEV_DEPENDENCY_UPDATED_VERSION, function (content) {
+    syncPom.main(pomContent, packageJsonContent, function (content) {
         packageVersion = JSON.parse(content).version;
-        devDependencyVersion = JSON.parse(content).devDependencies.myDevDependency;
     });
 
     assert.equal(packageVersion, PACKAGE_JSON_EXPECTED_NEW_VERSION);
-    if (DEV_DEPENDENCY) {
-        assert.equal(devDependencyVersion, DEV_DEPENDENCY_UPDATED_VERSION);
-    }
+}
+
+function testDependencyVersionReplacement(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION, PACKAGE_JSON_EXPECTED_NEW_VERSION, DEP_TYPE, DEPENDENCY, DEPENDENCY_UPDATED_VERSION) {
+    pomContent = setVersion(pomContent, POM_NEW_VERSION);
+    packageJsonContent = setVersion(packageJsonContent, PACKAGE_JSON_OLD_VERSION);
+    var dependencyVersion = "";
+
+    const writer = function writer(content) {
+        if (DEP_TYPE === DEPENDENCY_TYPE.DEV_DEPENDENCY) {
+            dependencyVersion = JSON.parse(content).devDependencies.myDevDependency;
+        } else if (DEP_TYPE === DEPENDENCY_TYPE.DEPENDENCY) {
+            dependencyVersion = JSON.parse(content).dependencies.myDependency;
+        } else {
+            dependencyVersion = undefined;
+        }
+    };
+
+    syncPom.main(pomContent, packageJsonContent, writer, DEPENDENCY, DEPENDENCY_UPDATED_VERSION);
+
+    assert.equal(dependencyVersion, DEPENDENCY_UPDATED_VERSION);
 }
 
 function testNoReplacementOccurred(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION) {
@@ -151,3 +185,4 @@ function testNoReplacementOccurred(POM_NEW_VERSION, PACKAGE_JSON_OLD_VERSION) {
 function setVersion(content, version) {
     return content.replace("######", version);
 }
+

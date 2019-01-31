@@ -13,7 +13,18 @@ function extractPomVersion(pomContent) {
     return pomVersion;
 }
 
-exports.main = function (pomContent, packageContent, devDependencyToUpdate, devDependencyNewVersion, writer) {
+function updateDependency(json, depType, dependencyToUpdate, dependencyNewVersion) {
+    var ret = "";
+    var dependencyToUpdateOldVersion = json[depType][dependencyToUpdate];
+    if (dependencyToUpdateOldVersion !== dependencyToUpdate) {
+        console.log('found version ' + dependencyToUpdateOldVersion + ' of dependency ' + dependencyToUpdate + ' in package.json');
+        json[depType][dependencyToUpdate] = dependencyNewVersion;
+        ret = 'package.json ' + dependencyToUpdate + ' updated to version ' + dependencyNewVersion + '\n'
+    }
+    return ret;
+}
+
+exports.main = function (pomContent, packageContent, writer, dependencyToUpdate, dependencyNewVersion) {
 
     var pomVersion = extractPomVersion(pomContent);
     console.log('found version ' + pomVersion + ' in pom.xml');
@@ -23,18 +34,24 @@ exports.main = function (pomContent, packageContent, devDependencyToUpdate, devD
     var npmVersion = json.version;
     console.log('found version ' + npmVersion + ' in package.json');
 
-    var devDependencyToUpdateOldVersion = json.devDependencies[devDependencyToUpdate];
-    console.log('found version ' + devDependencyToUpdateOldVersion + ' of devDependency ' + devDependencyToUpdate + ' in package.json');
-
     var newNpmVersion = mvnVersionToNpm(pomVersion);
 
+    var log = "";
     if (newNpmVersion !== npmVersion) {
         json.version = newNpmVersion;
-        json.devDependencies[devDependencyToUpdate] = devDependencyNewVersion;
-        var newPackageContent = JSON.stringify(json);
+        log = 'package.json updated to version ' + newNpmVersion + '\n';
+    }
+    if (json.devDependencies[dependencyToUpdate]) {
+        log += updateDependency(json, "devDependencies", dependencyToUpdate, dependencyNewVersion);
+
+    } else if (json.dependencies[dependencyToUpdate]) {
+        log += updateDependency(json, "dependencies", dependencyToUpdate, dependencyNewVersion);
+    }
+
+    var newPackageContent = JSON.stringify(json);
+    if (newPackageContent !== packageContent) {
         writer(newPackageContent);
-        console.log('package.json updated to version ' + newNpmVersion);
-        console.log('package.json ' + devDependencyToUpdate + ' updated to version ' + devDependencyNewVersion);
+        console.log(log);
     }
 };
 
