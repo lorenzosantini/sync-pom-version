@@ -1,6 +1,6 @@
 var fs = require('fs');
 const main = require("./syncpom").main;
-var args = process.argv.splice(4);
+var args = process.argv.splice(2);
 console.log(process.argv);
 console.log(args);
 var pomPath = args.length ? args[0] : 'pom.xml';
