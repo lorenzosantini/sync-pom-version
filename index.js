@@ -10,10 +10,10 @@ var UTF8 = 'UTF8';
 
 main(fs.readFileSync(pomPath, UTF8),
     fs.readFileSync(packagePath, UTF8),
-    devDependencyToUpdate,
-    devDependencyNewVersion,
     function packageNewContent(content) {
         fs.writeFileSync(packagePath, content, UTF8)
-    }
+    },
+    devDependencyToUpdate,
+    devDependencyNewVersion
 );
 
